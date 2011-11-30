@@ -2,243 +2,195 @@ package com.cydoniarp.amd3th.permittr;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public final class Property
-{
-  private Logger log;
-  protected Permittr plugin;
-  private LinkedHashMap<String, Object> properties = new LinkedHashMap<String, Object>();
-  private String filename;
-  private String pName;
+public final class Property {
+    private LinkedHashMap<String, String> props = new LinkedHashMap<String, String>();
+    private Map<String, String> keys = new HashMap<String, String>();
+    private String file;
+    private final String pname = Permittr.name;
+    private final Logger log = Permittr.log;
 
-  public Property(String filename, Permittr plugin)
-  {
-    this.plugin = plugin;
-    this.pName = plugin.pName;
-    this.log = plugin.log;
-    this.filename = filename;
-    File file = new File(filename);
-
-    if (file.exists())
-      load();
-    else
-      save();
-  }
-
-  public void load()
-  {
-    BufferedReader br = null;
-    try {
-      br = new BufferedReader(new FileReader(this.filename));
-
-      int cc = 0;
-      int lc = 0;
-      String line;
-      while ((line = br.readLine()) != null)
-      {
-        if (line.trim().length() == 0)
-        {
-          continue;
+    public Property(final String file) {
+        if (file.equals(null)) return;
+        this.file = file;
+        if (new File(file).exists()) {
+            load();
         }
-        if ((line.charAt(0) == '#') && (lc > 0))
-        {
-          int delim = line.indexOf(' ');
-          String key = "com" + cc;
-          String val = line.substring(delim + 1).trim();
-          this.properties.put(key, val);
-          cc++;
+    }
+    
+    // Load data from file into ordered HashMap
+    public Property load() {
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new InputStreamReader(new FileInputStream(file),"UTF-8"));
+            String line;
+            byte cc = 0; // # of comments
+            int delim;
+            
+            // While there are lines to read (auto-breaks)
+            while ((line = br.readLine()) != null) {
+                // Is a comment, store it
+                if (line.charAt(0) == '#') {
+                    props.put("#"+cc, line.substring(line.indexOf(' ')+1).trim());
+                    cc++;
+                    continue;
+                }
+                // Isn't a comment, store the key and value
+                while ((delim = line.indexOf('=')) != -1) {
+                    final String key = line.substring(0, delim).trim();
+                    props.put(key.toLowerCase(), line.substring(delim+1).trim());
+                    keys.put(key.toLowerCase(), key);
+                    break;
+                }
+            }
+        } catch (final FileNotFoundException e) {
+            log.log(Level.SEVERE, '['+pname+"]: Couldn't find file "+file, e);
+        } catch (final IOException e) {
+            log.log(Level.SEVERE, '['+pname+"]: Unable to save "+file, e);
+        } finally {
+            // Close the reader
+            try {
+                if (null != br) {
+                    br.close();
+                }
+            } catch (final IOException e) {
+                log.log(Level.SEVERE, '['+pname+"]: Unable to save "+file, e);
+            }
         }
-        else
-        {
-          if (lc > 0)
-          {
-            int delim = line.indexOf('=');
-            String key = line.substring(0, delim).trim();
-            String val = line.substring(delim + 1).trim();
-            this.properties.put(key, val);
-          }
-          lc++;
+        return this;
+    }
+    
+    // Save data from LinkedHashMap to file
+    public Property save() {
+        BufferedWriter bw = null;
+        try {
+            // Construct the BufferedWriter object
+            bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),"UTF-8"));
+            
+            // Save all the props one at a time, only if there's data to write
+            if (props.size() > 0) {
+                // Grab all the entries and create an iterator to run through them all
+                final Iterator<Map.Entry<String, String>> i = props.entrySet().iterator();
+                
+                // While there's data to iterate through..
+                while (i.hasNext()) {
+                    // Map the entry and save the key and value as variables
+                    final String key = keys.get(i.next().getKey()); // Case-preserved key
+                    final String val = i.next().getValue();
+                    
+                    // If it starts with "#", it's a comment so write it as such
+                    if (key.charAt(0) == '#') {
+                        // Writing a comment to the file
+                        bw.write("# "+val);
+                        bw.newLine();
+                        continue;
+                    }
+                    // Otherwise write the key and value pair as key=value
+                    bw.write(key+'='+val);
+                    bw.newLine();
+                }
+            }
+        } catch (final FileNotFoundException e) {
+            log.log(Level.SEVERE, '['+pname+"]: Couldn't find file "+file, e);
+        } catch (final IOException e) {
+            log.log(Level.SEVERE, '['+pname+"]: Unable to save "+file, e);
+        } finally {
+            // Close the BufferedWriter
+            try {
+                if (null != bw) {
+                    bw.close();
+                }
+            } catch (final IOException e) {
+                log.log(Level.SEVERE, '['+pname+"]: Unable to close buffer for "+file, e);
+            }
         }
-      } } catch (FileNotFoundException ex) { this.log.log(Level.SEVERE, '[' + this.pName + "]: Couldn't find file " + this.filename, ex);
-      return; } catch (IOException ex) { this.log.log(Level.SEVERE, '[' + this.pName + "]: Unable to save " + this.filename, ex);
-      return;
+        return this;
     }
-    finally {
-      try {
-        if (br != null)
-          br.close();
-      }
-      catch (IOException ex) {
-        this.log.log(Level.SEVERE, '[' + this.pName + "]: Unable to save " + this.filename, ex);
-      }
+    
+    // Return current map
+    public List<Map<String, String>> copy() {
+        List<Map<String, String>> o = new ArrayList<Map<String, String>>();
+        o.add(props);
+        o.add(keys);
+        return o;
     }
-    try
-    {
-      if (br != null)
-        br.close();
+    
+    // Convert current map to specified map
+    public Property paste(final List<Map<String, String>> list) {
+        props.putAll(list.get(0));
+        keys.putAll(list.get(1));
+        return this;
     }
-    catch (IOException ex) {
-      this.log.log(Level.SEVERE, '[' + this.pName + "]: Unable to save " + this.filename, ex);
+    
+    // Grab all keys
+    public Set<String> getKeys() {
+        return props.keySet();
     }
-  }
-
-  public void save()
-  {
-    BufferedWriter bw = null;
-    try
-    {
-      bw = new BufferedWriter(new FileWriter(this.filename));
-      bw.write("# " + this.pName + " Properties File");
-      bw.newLine();
-
-      if (this.properties.size() > 0)
-      {
-        Set<?> set = this.properties.entrySet();
-        Iterator<?> i = set.iterator();
-
-        while (i.hasNext())
-        {
-          Map.Entry<?,?> me = (Map.Entry<?,?>)i.next();
-          String key = (String)me.getKey();
-          String val = me.getValue().toString();
-
-          if (key.startsWith("com"))
-          {
-            bw.write("# " + val);
-            bw.newLine();
-          }
-          else {
-            bw.write(key + '=' + val);
-            bw.newLine();
-          }
-        }
-      } } catch (FileNotFoundException ex) { this.log.log(Level.SEVERE, '[' + this.pName + "]: Couldn't find file " + this.filename, ex);
-      return; } catch (IOException ex) { this.log.log(Level.SEVERE, '[' + this.pName + "]: Unable to save " + this.filename, ex);
-      return;
+    
+    // Extend ability to clear all mappings
+    public Property clear() {
+        props.clear();
+        keys.clear();
+        return this;
     }
-    finally {
-      try {
-        if (bw != null) {
-          bw.flush();
-          bw.close();
-        }
-      } catch (IOException ex) {
-        this.log.log(Level.SEVERE, '[' + this.pName + "]: Unable to save " + this.filename, ex);
-      }
+    
+    // Remove the key. Extends native removal
+    public Property remove(final String key) {
+        props.remove(key.toLowerCase());
+        keys.remove(key.toLowerCase());
+        return this;
     }
-    try
-    {
-      if (bw != null) {
-        bw.flush();
-        bw.close();
-      }
-    } catch (IOException ex) {
-      this.log.log(Level.SEVERE, '[' + this.pName + "]: Unable to save " + this.filename, ex);
+    
+    // Check if the key exists or not
+    public boolean keyExists(final String key) {
+        return props.containsKey(key.toLowerCase());
     }
-  }
-
-  public void rebuild(LinkedHashMap<String, Object> newMap)
-  {
-    this.properties.clear();
-    this.properties.putAll(newMap);
-    save();
-  }
-
-  public boolean match(LinkedHashMap<String, Object> prop)
-  {
-    return this.properties.keySet().containsAll(prop.keySet());
-  }
-
-  public boolean keyExists(String key)
-  {
-    return this.properties.containsKey(key);
-  }
-
-  public boolean isEmpty(String key)
-  {
-    return this.properties.get(key).toString().isEmpty();
-  }
-
-  public void inc(String key)
-  {
-    this.properties.put(key, String.valueOf(Integer.parseInt((String)this.properties.get(key)) + 1));
-  }
-
-  public String getString(String key)
-  {
-    if (this.properties.containsKey(key)) {
-      return (String)this.properties.get(key);
+    
+    // Check if the key no value
+    public boolean isEmpty(final String key) {
+        return props.get(key.toLowerCase()).isEmpty();
     }
-    return "";
-  }
-  public void setString(String key, String value) {
-    this.properties.put(key, value);
-  }
-
-  public int getInt(String key)
-  {
-    if (this.properties.containsKey(key)) {
-      return Integer.parseInt((String)this.properties.get(key));
+    
+    // Set property value
+    public Property set(final String key, final Object value) {
+        props.put(key.toLowerCase(), String.valueOf(value));
+        keys.put(key.toLowerCase(), key);
+        return this;
     }
-    return 0;
-  }
-  public void setInt(String key, int value) {
-    this.properties.put(key, String.valueOf(value));
-    save();
-  }
-
-  public double getDouble(String key)
-  {
-    if (this.properties.containsKey(key)) {
-      return Double.parseDouble((String)this.properties.get(key));
+    
+    // Get property value as a String
+    public String getString(final String key) {
+        return props.containsKey(key.toLowerCase()) ? props.get(key.toLowerCase()) : "";
     }
-    return 0.0D;
-  }
-  public void setDouble(String key, double value) {
-    this.properties.put(key, String.valueOf(value));
-  }
-
-  public long getLong(String key)
-  {
-    if (this.properties.containsKey(key)) {
-      return Long.parseLong((String)this.properties.get(key));
+    
+    // Get property value as a boolean
+    public boolean getBool(final String key) {
+        return props.containsKey(key.toLowerCase()) ? Boolean.parseBoolean(props.get(key.toLowerCase())) : false;
     }
-    return 0L;
-  }
-  public void setLong(String key, long value) {
-    this.properties.put(key, String.valueOf(value));
-  }
-
-  public float getFloat(String key)
-  {
-    if (this.properties.containsKey(key)) {
-      return Float.parseFloat((String)this.properties.get(key));
+    
+    // Get property value as an int
+    public int getInt(final String key) {
+        return props.containsKey(key.toLowerCase()) ? Integer.parseInt(props.get(key.toLowerCase())) : 0;
     }
-    return 0.0F;
-  }
-  public void setFloat(String key, float value) {
-    this.properties.put(key, String.valueOf(value));
-  }
-
-  public boolean getBoolean(String key)
-  {
-    if (this.properties.containsKey(key)) {
-      return Boolean.parseBoolean((String)this.properties.get(key));
+    
+    // Get property value as a double
+    public double getDouble(final String key) {
+        return props.containsKey(key.toLowerCase()) ? Double.parseDouble(props.get(key.toLowerCase())) : 0.0D;
     }
-    return false;
-  }
-  public void setBoolean(String key, boolean value) {
-    this.properties.put(key, String.valueOf(value));
-  }
 }

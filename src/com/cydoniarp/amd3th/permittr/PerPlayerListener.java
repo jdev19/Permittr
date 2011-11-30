@@ -5,14 +5,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerListener;
 
 public class PerPlayerListener extends PlayerListener {
-	protected Permittr plugin;
+    
+	public PerPlayerListener(){}
 	
-	public PerPlayerListener(Permittr plugin){
-		this.plugin = plugin;
-	}
-	
-	public void onPlayerJoin(PlayerJoinEvent event){
-		Player plyr = event.getPlayer();
-		String name = plyr.getName();
+	public void onPlayerJoin(final PlayerJoinEvent e){
+		final Player p = e.getPlayer();
+		final String name = p.getName();
 	}
 }
