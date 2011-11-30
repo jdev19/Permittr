@@ -8,30 +8,26 @@ import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.BlockPlaceEvent;
 
 public class PerBlockListener extends BlockListener{
-	public Permittr plugin;
+    
+	public PerBlockListener(){}
 	
-	public PerBlockListener(Permittr plugin){
-		this.plugin = plugin;
-	}
-	
-	public void onBlockPlace(BlockPlaceEvent event){
-		Player player = event.getPlayer();
-		Material mat = event.getBlock().getType();
+	public void onBlockPlace(final BlockPlaceEvent e){
+		final Player p = e.getPlayer();
+		Material mat = e.getBlock().getType();
 		int ID = mat.getId();
 		if(Permittr.permit.hasId(ID)){
-			String name = Permittr.permit.get(key)
+			String name = Permittr.permit.get(key);
 			if(Permittr.permit.get("amount") < 1){
-				event.setCancelled(true);
-				player.sendMessage(ChatColor.RED + "You need a permit to do that. Use /permit list to see available permits.");
+				e.setCancelled(true);
+				p.sendMessage(ChatColor.RED + "You need a permit to do that. Use /permit list to see available permits.");
 			}else{
-				
+				// I dunno chief...
 			}
 		}
 	}
 	
-	public void onBlockBreak(BlockBreakEvent event){
-		Player player = event.getPlayer();
-		Material mat = event.getBlock().getType();
-		
+	public void onBlockBreak(final BlockBreakEvent e){
+		final Player p = e.getPlayer();
+		Material material = e.getBlock().getType();
 	}
 }
