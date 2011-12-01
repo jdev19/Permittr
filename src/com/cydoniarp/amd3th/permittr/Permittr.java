@@ -1,40 +1,35 @@
 package com.cydoniarp.amd3th.permittr;
 
 import java.io.File;
-import java.io.IOException;
-import java.security.acl.Permission;
-import java.util.ArrayList;
+//import java.io.IOException;
+//import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+//import java.util.LinkedHashMap;
 import java.util.logging.Logger;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Server;
+//import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.Configuration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Type;
 import org.bukkit.event.Event.Priority;
-import org.bukkit.plugin.Plugin;
+//import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class Permittr extends JavaPlugin{
-	protected static Logger log;
-	protected HashMap<String, Permit> permits = new HashMap<String, Permit>();
-	protected Property player;
-	protected static String name;
+public class Permittr extends JavaPlugin {
+	protected HashMap<String, Configuration> permits = new HashMap<String, Configuration>();
+	protected static Configuration config;
 	protected static String version;
+	protected static String name;
+	protected static Logger log;
 	protected static String df;
-	protected String players;
-	protected String permitd;
-	protected String logs;
-	protected pCom worker;
-	public static Permit permit;
+	protected String pmf;
 	
-	private void mkDir(String...d) {
+	private void mkDirs(final String...d) {
         for (String f : d) {
             try {
                 new File(f).mkdir();
@@ -52,31 +47,33 @@ public class Permittr extends JavaPlugin{
 
 	// ON ENABLE
 	public void onEnable(){
+	    log.info("["+name+"] v"+version+" has been enabled.");
+	    
+	    // Create logger
 	    log = getServer().getLogger();
+	    
+	    // Config
+	    
 		
 		// Register events
-		PluginManager pm = getServer().getPluginManager();
+		final PluginManager pm = getServer().getPluginManager();
 		final PerBlockListener bl = new PerBlockListener();
 		pm.registerEvent(Type.PLAYER_JOIN, new PerPlayerListener(), Priority.Normal, this);
 		pm.registerEvent(Type.BLOCK_BREAK, bl, Priority.Normal, this);
 		pm.registerEvent(Type.BLOCK_PLACE, bl, Priority.Normal, this);
-		PluginDescriptionFile pdf = getDescription();
-		name = pdf.getName();
-		version = pdf.getVersion();
+		name = getDescription().getName();
+		version = getDescription().getVersion();
 		df = getDataFolder().toString();
 		
-		log.info("["+name+"] v"+pdf.getVersion()+" has been enabled.");
-		
 		// Make folders as needed
-		mkDir(df, logs, permitd, players);
+		mkDirs(df);
 		
 		//COMMANDS
-		this.worker = new pCom(this);
 		getCommand("permit").setExecutor(new CommandExecutor(){
 			public boolean onCommand(CommandSender sender, Command cmd, String cmdLabel, String[] args){
 				if (sender instanceof Player){
-					Player pl = ((Player)sender);
-					/* Not sure what was happening here...
+					final Player p = ((Player)sender);
+					/* Create a permit
 					if(args.length == 4){
 						if (args[0].equalsIgnoreCase("create") && player.){
 							//CREATE CODE
@@ -89,11 +86,11 @@ public class Permittr extends JavaPlugin{
 					}
 					*/
 					if(args.length == 3){
-						if (args[0].equalsIgnoreCase("add") && pl.hasPermission("permit.add")){
+						if (args[0].equalsIgnoreCase("add") && p.hasPermission("permit.add")){
 							//ADD CODE
 							String pName = args[1];
 							String it = args[2];
-							Permittr.this.worker.permAdd(pl, pName, it);
+							Permittr.this.worker.permAdd(p, pName, it);
 							return true;
 						}
 					}
@@ -130,7 +127,6 @@ public class Permittr extends JavaPlugin{
 							return true;
 						}
 					}
-					*/
 					if(args.length == 1){
 						if (args[0].equalsIgnoreCase("list") && pl.hasPermission("permit.list")){
 							//LIST CODE
@@ -138,6 +134,7 @@ public class Permittr extends JavaPlugin{
 							return true;
 						}
 					}
+					*/
 				}
 				return false;
 			}
