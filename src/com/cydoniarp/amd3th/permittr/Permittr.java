@@ -1,17 +1,21 @@
 package com.cydoniarp.amd3th.permittr;
 
+import java.awt.List;
 import java.io.File;
 //import java.io.IOException;
 //import java.util.ArrayList;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 //import java.util.LinkedHashMap;
 import java.util.logging.Logger;
 
-//import org.bukkit.ChatColor;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Type;
 import org.bukkit.event.Event.Priority;
@@ -23,77 +27,89 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class Permittr extends JavaPlugin {
 	protected HashMap<String, Configuration> permits = new HashMap<String, Configuration>();
 	protected static Configuration config;
+	protected static FileConfiguration perms;
 	protected static String version;
 	protected static String name;
 	protected static Logger log;
 	protected static String df;
 	protected String pmf;
-	
+
 	private void mkDirs(final String...d) {
-        for (String f : d) {
-            try {
-                new File(f).mkdir();
-            } catch (SecurityException e) {
-                log.severe('['+name+"] Failed to create folder: "+f);
-                e.printStackTrace();
-            }
-        }
-    }
-	
+		for (String f : d) {
+			try {
+				new File(f).mkdir();
+			} catch (SecurityException e) {
+				log.severe('['+name+"] Failed to create folder: "+f);
+				e.printStackTrace();
+			}
+		}
+	}
+
 	// ON DISABLE
 	public void onDisable() {
-        log.info("["+name+"] v"+version+" has been disabled");
-    }
+		log.info("["+name+"] v"+version+" has been disabled");
+	}
 
 	// ON ENABLE
 	public void onEnable(){
-	    log.info("["+name+"] v"+version+" has been enabled.");
-	    
-	    // Create logger
-	    log = getServer().getLogger();
-	    
-	    // Config
-	    
-		
+		log.info("["+name+"] v"+version+" has been enabled.");
+
+		perms = getConfig();
+		// Create logger
+		log = getServer().getLogger();
+
+		// Config
+
+
 		// Register events
 		final PluginManager pm = getServer().getPluginManager();
-		final PerBlockListener bl = new PerBlockListener();
+		//final PerBlockListener bl = new PerBlockListener();
 		pm.registerEvent(Type.PLAYER_JOIN, new PerPlayerListener(), Priority.Normal, this);
-		pm.registerEvent(Type.BLOCK_BREAK, bl, Priority.Normal, this);
-		pm.registerEvent(Type.BLOCK_PLACE, bl, Priority.Normal, this);
+		//pm.registerEvent(Type.BLOCK_BREAK, bl, Priority.Normal, this);
+		//pm.registerEvent(Type.BLOCK_PLACE, bl, Priority.Normal, this);
 		name = getDescription().getName();
 		version = getDescription().getVersion();
 		df = getDataFolder().toString();
-		
+
 		// Make folders as needed
 		mkDirs(df);
-		
+
 		//COMMANDS
 		getCommand("permit").setExecutor(new CommandExecutor(){
 			public boolean onCommand(CommandSender sender, Command cmd, String cmdLabel, String[] args){
 				if (sender instanceof Player){
 					final Player p = ((Player)sender);
-					/* Create a permit
-					if(args.length == 4){
-						if (args[0].equalsIgnoreCase("create") && player.){
-							//CREATE CODE
-							String pName = args[1];
-							int am = Integer.parseInt(args[2]);
-							int pr = Integer.parseInt(args[3]);
-							Permittr.this.worker.permCreate(pl, pName, am, pr);
-							return true;
-						}
+					/* Create a permit					*/
+
+					if (args[0].equalsIgnoreCase("create") && p.hasPermission("permit.create")){
+						//CREATE CODE
+						final String pName = args[1];
+						final int am = Integer.parseInt(args[2]);
+						final int pr = Integer.parseInt(args[3]);
+						final ArrayList<Integer> ids = new ArrayList<Integer>();
+						final String[] arguments;
+
+
+						perms.set(pName+".amount", am);
+						perms.set(pName+".price", pr);
+						perms.set(pName+".IDs", ids);
+						((Player)sender).sendMessage(ChatColor.GREEN+"Permit "+ChatColor.WHITE+pName+ChatColor.GREEN+" has been created.");
+						return true;
 					}
-					*/
-					if(args.length == 3){
-						if (args[0].equalsIgnoreCase("add") && p.hasPermission("permit.add")){
-							//ADD CODE
-							String pName = args[1];
-							String it = args[2];
-							Permittr.this.worker.permAdd(p, pName, it);
-							return true;
+
+
+
+					if (args[0].equalsIgnoreCase("add") && p.hasPermission("permit.add")){
+						//ADD CODE
+						final String pName = args[1];
+						final String[] ids = args[2].split(",");
+						//final List idList = new List();
+						for (String id : ids){
+							perms.getList(pName+".IDs").add(id);
 						}
+						return true;
 					}
+
 					/* Fix this up too
 					if(args.length == 2){
 						if (args[0].equalsIgnoreCase("buy") && pl.hasPermission("permit.buy")){
@@ -115,7 +131,7 @@ public class Permittr extends JavaPlugin {
 									account.subtract(am);
 									return true;
 								}
-								
+
 							}else{
 								((Player)sender).sendMessage(ChatColor.RED+"You do not have enough money to purchase that permit.");
 							}
@@ -134,7 +150,7 @@ public class Permittr extends JavaPlugin {
 							return true;
 						}
 					}
-					*/
+					 */
 				}
 				return false;
 			}
